@@ -8,8 +8,9 @@ WriteMakefile(
     PREREQ_PM         => {
       'Carp::Assert'               => 0,
       'Parse::Binary::FixedFormat' => 0.02,
+      'Text::Wrap'                 => 0,    # standard module, but...
     }, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => 'lib/GPS/Lowrance/LSI.pm', # retrieve abstract from module
+      (ABSTRACT_FROM  => 'lib/GPS/Lowrance/LSI.pm',
        AUTHOR         => 'Robert Rothenberg <rrwo at cpan.org>') : ()),
 );

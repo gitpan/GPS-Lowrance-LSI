@@ -1,12 +1,13 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         GPS-Lowrance-LSI
-version:      0.21
+version:      0.22
 version_from: lib/GPS/Lowrance/LSI.pm
 installdirs:  site
 requires:
     Carp::Assert:                  0
     Parse::Binary::FixedFormat:    0.02
+    Text::Wrap:                    0
 
 distribution_type: module
 generated_by: ExtUtils::MakeMaker version 6.17

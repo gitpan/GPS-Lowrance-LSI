@@ -1,9 +1,17 @@
-Revision history for Perl extension GPS::Lowrance::LSI.
+Revision history for Perl extension GPS::Lowrance::LSI.  (Changes that
+may affect backward compatability are marked with asterisks "*".)
 
-0.21
+0.22   2 Mar 2003
+	- will not read data in more than 256 bytes at a time,
+	  as per protocol specs
+	- added word wrapping to debug messages
+	- better I/O handling
+	- fixed typos in Changes
+
+0.21   2 Mar 2004
 	- fixed bug with retries for bad checksums
 	- retries for timeouts did not work
-	- added checksum to submitted data
+	* added checksum to submitted data
 	- eg/getinfo.pl, $PortObj close method was not called
 	- Makefile.PL still requires 5.00802; changed to 5.006
 

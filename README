@@ -22,7 +22,7 @@ REQUIREMENTS
     For Windows playforms, you may need to use "nmake" instead.
 
 SYNOPSIS
-      use Win32::SerialPort;                # or Device::SerialPort (?)
+      use Win32::SerialPort;              # or Device::SerialPort (?)
       use GPS::Lowrance::LSI 'lsi_query';
 
       my $port = new Win32::SerialPort( 'com1' );
@@ -35,19 +35,20 @@ DESCRIPTION
     Eagle GPS devices.
 
     (Higher-level functions and wrappers for specific commands will be
-    provided in other modules. This module is intentionally kept simple.)
+    provided in other modules such as GPS::Lowrance. This module is
+    intentionally kept simple and separate.)
 
     More information is available in the module documentation.
 
 REVISION HISTORY
     Changes since version 0.21:
 
-    0.21   2 Mar 2004
-	- fixed bug with retries for bad checksums
-	- retries for timeouts did not work
-	- added checksum to submitted data
-	- eg/getinfo.pl, $PortObj close method was not called
-	- Makefile.PL still requires 5.00802; changed to 5.006
+    0.22   2 Mar 2003
+	- will not read data in more than 256 bytes at a time,
+	  as per protocol specs
+	- added word wrapping to debug messages
+	- better I/O handling
+	- fixed typos in Changes
 
 AUTHOR
     Robert Rothenberg <rrwo at cpan.org>

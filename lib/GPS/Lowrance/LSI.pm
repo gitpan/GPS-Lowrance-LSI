@@ -19,10 +19,16 @@ our @EXPORT = qw(
   lsi_query
 );
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 use Carp::Assert;
 use Parse::Binary::FixedFormat;
+use Text::Wrap 'wrap';
+
+use constant XMIT_DEBUG_MSG => 'XMIT => ';
+use constant RCVD_DEBUG_MSG => 'RCVD => ';
+
+use constant BYTES_MAX      => 256;     # 256-bytes max to read at any time
 
 BEGIN {
 
@@ -119,10 +125,13 @@ sub lsi_query {
 
   do {
     if ($debug) {
-      print STDERR "XMIT => ", _str2hex($xmit), "\n";
+      print STDERR wrap( XMIT_DEBUG_MSG, (" " x length(XMIT_DEBUG_MSG)),
+			 _str2hex($xmit) ), "\n";
     }
 
-    $port->write( $xmit );
+    my $xmit_cnt  = $port->write( $xmit );
+    die "unable to write query",
+      if ($xmit_cnt != length( $xmit ));
 
     $end_time     = $timeout + time;         # reset timeouts
     $no_timed_out = 1;                       # 
@@ -132,21 +141,20 @@ sub lsi_query {
 
     do {
 
-      # My GlobalMap 100 seems to return data in 8-byte blocks. So we
-      # have to input in drips and drabs.
+      my $block_expected = ($expected > BYTES_MAX) ? BYTES_MAX : $expected;
+      my ($in_size, $in) = $port->read( $block_expected );
 
-      my $in = $port->input;
-
-      if ($in ne "") {
+      if ($in_size) {
 
 	if ($debug) {
-	  print STDERR "RCVD => ", _str2hex($in), "\n"; }
+	  print STDERR wrap( RCVD_DEBUG_MSG, (" " x length(RCVD_DEBUG_MSG)),
+			 _str2hex($in) ), "\n";
+	}
 
 	if ($ack) {
-	  $expected -= length($in);
-	  $rcvd .= $in;
+	  $expected -= $in_size;
+	  $rcvd     .= $in;
 	} else {
-
 	  my $hdr = $LsiSentence->unformat( $in );
 
 	  if ( ($hdr->{Header} == LSI_PREAMBLE) &&
