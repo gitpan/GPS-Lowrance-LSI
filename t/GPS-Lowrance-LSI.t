@@ -3,9 +3,7 @@
 
 #########################
 
-# change 'tests => 1' to 'tests => last_test_to_print';
-
-use Test::More tests => 1;
+use Test::More tests => 2561;
 BEGIN { use_ok('GPS::Lowrance::LSI') };
 
 #########################
@@ -16,4 +14,24 @@ BEGIN { use_ok('GPS::Lowrance::LSI') };
 # Eventually tests for checksum and header-building functions will be
 # added.
 
+sub chksum {
+  return GPS::Lowrance::LSI::lsi_checksum( @_ );
+}
+
+# Test the checksum algorithm.  This is probably good enough.
+
+for my $simple (0..255) {
+  my $chk = (($simple ^ 0xff) + 1) & 0xff;
+  ok( chksum( pack( "C", $simple) ) == $chk );
+
+  for my $detail (qw(1 2 4 8 16 32 64 128 255)) {
+    $chk = (((($simple + $detail) & 0xff) ^ 0xff) + 1) & 0xff;
+    ok( chksum( pack( "v", ($simple*256)+$detail ) ) == $chk );    
+  }
+}
+
+# We assume that Parse::Binary::FixedFormat works, so we don't need
+# to test the header formats.
+
+# Likewise, it's difficult to test connection with GPS...
 

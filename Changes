@@ -1,5 +1,19 @@
 Revision history for Perl extension GPS::Lowrance::LSI.
 
+0.10   1 Mar 2004
+	- $expected is only decremented when we have an acknowledgement
+	- updated META.yml file
+	- added example to POD
+	- renamed _checksum to lsi_checksum and made exportable
+	- added tests for checksum algorithm
+	- fixed error in checksum algorithm
+	- compares checksum of data
+	- changed timed out warning
+	- $send_data can be undefined
+	- added comments to code
+	- uses Parse::Binary::FixedFormat
+	- updated Makefile.PL from original
+
 0.01  29 Feb 2004
 	- original version; created by h2xs 1.23 with options
 		-n GPS::Lowrance::LSI -v 0.01 -X
