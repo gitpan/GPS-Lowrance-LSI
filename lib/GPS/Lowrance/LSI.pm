@@ -19,7 +19,7 @@ our @EXPORT = qw(
   lsi_query
 );
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 use Carp::Assert;
 use Parse::Binary::FixedFormat;
@@ -164,10 +164,11 @@ sub lsi_query {
 	      warn "response header checksum mismatch";
 	      $bad_chksum = 1;
 	    }
-
-	    $expected = 1+$hdr->{Cnt}, if ($hdr->{Cnt});
+	    
+	    $expected = ($hdr->{Cnt}) ? (1+$hdr->{Cnt}) : 0;
 	    $ack      = 1;
 	    $rcvd    .= $in;
+
 	  } else {
 	    warn "ignoring unrecognized response";
 	  }
@@ -188,7 +189,7 @@ sub lsi_query {
     }
 
     if ($retry<0) {                     # ignore bad checksum and timeouts
-      $bad_chksum = 0;
+      $bad_chksum   = 0;
       $no_timed_out = 1;
     } 
   } while ( $retry-- && ($bad_chksum || (!$no_timed_out)) );
@@ -377,7 +378,7 @@ L<http://home.cfl.rr.com/genecash/eagle.html>.
 There are other Perl modules to communicate with different GPS brands:
 
   GPS::Garmin
-  GPS::Magellen
+  GPS::Magellan
 
 =head1 AUTHOR
 

@@ -1,7 +1,11 @@
 Revision history for Perl extension GPS::Lowrance::LSI.  (Changes that
 may affect backward compatability are marked with asterisks "*".)
 
-0.22   2 Mar 2003
+0.23   3 Mar 2004
+	- typos in Change file again
+	- properly handles the case when there is no data in the reply
+
+0.22   2 Mar 2004
 	- will not read data in more than 256 bytes at a time,
 	  as per protocol specs
 	- added word wrapping to debug messages
