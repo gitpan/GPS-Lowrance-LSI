@@ -1,5 +1,15 @@
 Revision history for Perl extension GPS::Lowrance::LSI.
 
+0.20   1 Mar 2004
+	- example script added
+	- default timeout changed to 5
+	- minor changes to test cases
+	- implemented retry functionality for bad checksums
+	- timeout covers transmit time as well
+	- debug output has "XMIT" and "RCVD" headers
+	- added verify_checksum function
+	- updates and additions to POD
+
 0.10   1 Mar 2004
 	- $expected is only decremented when we have an acknowledgement
 	- updated META.yml file

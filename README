@@ -31,8 +31,8 @@ SYNOPSIS
 
 DESCRIPTION
     This module provides *very* low-level support for the LSI (Lowrance
-    Serial Interface) 100 protocol used to communicate with Lowrance GPS
-    devices.
+    Serial Interface) 100 protocol used to communicate with Lowrance or
+    Eagle GPS devices.
 
     (Higher-level functions and wrappers for specific commands will be
     provided in other modules. This module is intentionally kept simple.)
@@ -40,22 +40,17 @@ DESCRIPTION
     More information is available in the module documentation.
 
 REVISION HISTORY
+    Changes since version 0.10:
 
-    Changes since version 0.01:
-
-    0.10   1 Mar 2004
-	- $expected is only decremented when we have an acknowledgement
-	- updated META.yml file
-	- added example to POD
-	- renamed _checksum to lsi_checksum and made exportable
-	- added tests for checksum algorithm
-	- fixed error in checksum algorithm
-	- compares checksum of data
-	- changed timed out warning
-	- $send_data can be undefined
-	- added comments to code
-	- uses Parse::Binary::FixedFormat
-	- updated Makefile.PL from original
+    0.20   1 Mar 2004
+	- example script added
+	- default timeout changed to 5
+	- minor changes to test cases
+	- implemented retry functionality for bad checksums
+	- timeout covers transmit time as well
+	- debug output has "XMIT" and "RCVD" headers
+	- added verify_checksum function
+	- updates and additions to POD
 
 AUTHOR
     Robert Rothenberg <rrwo at cpan.org>
@@ -66,4 +61,3 @@ COPYRIGHT AND LICENSE
     This library is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself, either Perl version 5.8.2 or, at
     your option, any later version of Perl 5 you may have available.
-

@@ -3,10 +3,12 @@
 
 #########################
 
-use Test::More tests => 2561;
+use Test::More tests => 2562;
 BEGIN { use_ok('GPS::Lowrance::LSI') };
 
 #########################
+
+ok('GPS::Lowrance::LSI::VERSION' ge '0.20');
 
 # At the moment no test cases are specified, since most of the code
 # would require connecting to a Lowrance or compatible GPS.
@@ -18,6 +20,10 @@ sub chksum {
   return GPS::Lowrance::LSI::lsi_checksum( @_ );
 }
 
+sub verify {
+  return GPS::Lowrance::LSI::verify_checksum( @_ );
+}
+
 # Test the checksum algorithm.  This is probably good enough.
 
 for my $simple (0..255) {
@@ -26,7 +32,8 @@ for my $simple (0..255) {
 
   for my $detail (qw(1 2 4 8 16 32 64 128 255)) {
     $chk = (((($simple + $detail) & 0xff) ^ 0xff) + 1) & 0xff;
-    ok( chksum( pack( "v", ($simple*256)+$detail ) ) == $chk );    
+    my $str = pack( "vC", ($simple*256)+$detail, $chk );
+    ok( verify( $str ) );    
   }
 }
 

@@ -10,7 +10,7 @@ use AutoLoader qw(AUTOLOAD);
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [ qw(
-  lsi_query lsi_checksum
+  lsi_query lsi_checksum verify_checksum
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -19,7 +19,7 @@ our @EXPORT = qw(
   lsi_query
 );
 
-our $VERSION = '0.10';
+our $VERSION = '0.20';
 
 use Carp::Assert;
 use Parse::Binary::FixedFormat;
@@ -37,7 +37,7 @@ BEGIN {
 }
 
 use constant LSI_PREAMBLE    => 0x8155;
-use constant DEFAULT_TIMEOUT => 30;
+use constant DEFAULT_TIMEOUT => 5;
 
 # _str2hex is a really simple routine to output hex dumps of data;
 # it's not worthwhile using Data::Hexdumper or family just for this.
@@ -59,6 +59,14 @@ sub lsi_checksum {
   return $chksum;
 }
 
+# verify the checksum at the end of a data structure
+
+sub verify_checksum {
+  my $str    = shift;
+  my $chksum = unpack("C", substr($str, -1));
+  return ( $chksum == lsi_checksum( substr($str, 0, -1) ) );
+}
+
 my $LsiSentence = undef;
 
 INIT {
@@ -71,16 +79,20 @@ INIT {
 }
 
 sub lsi_query {
-  my ($port, $cmd, $send_data, $id, $debug, $timeout) = @_;
+  my ($port, $cmd, $send_data, $id, $debug, $timeout, $retry) = @_;
 
   $send_data = "", unless (defined $send_data);
   my $size   = length($send_data);
 
   $id      ||= 0;
+  $timeout ||= DEFAULT_TIMEOUT;              # set to default timeout
+  $retry   ||= 0;                            # retry defaults to 0
 
   assert( ($cmd & 0x80) == 0 ),          if DEBUG;
   assert( $size <= 0xffff ),             if DEBUG;
   assert( ($id >= 0) && ($id <= 0xff) ), if DEBUG;
+  assert( $timeout >= 0 ),               if DEBUG;
+  assert( $retry >= -1 ),                if DEBUG;
 
   my $hdr = {
 	     Header => LSI_PREAMBLE,         # magic number 
@@ -95,71 +107,78 @@ sub lsi_query {
 
   $xmit = $LsiSentence->format( $hdr ) . $send_data;
 
-  if ($debug) {
-    print STDERR _str2hex($xmit), "\n";
-  }
+  my $end_time     = $timeout + time;        # when to timeout
+  my $no_timed_out = 1;                      # not timed out?
 
-  $port->write( $xmit );
+  my $bad_chksum   = 0;                      # was checksum bad?
 
-  $timeout ||= DEFAULT_TIMEOUT;
-
-  my $end_time = $timeout + time;            # when to timeout
-
-  my $rcvd     = "";                         # receive buffer
-  my $expected = 8;                          # bytes expected
-  my $ack      = 0;                          # was an ack received?
+  my $rcvd         = "";	             # receive buffer
 
   do {
+    if ($debug) {
+      print STDERR "XMIT => ", _str2hex($xmit), "\n"; }
 
-    # My GlobalMap 100 seems to return data in 8-byte blocks. So we
-    # have to input in drips and drabs.
+    $port->write( $xmit );
 
-    my $in = $port->input;
+    my $expected     = 8;	             # bytes expected (header size)
+    my $ack          = 0;	             # was an ack received?
 
-    if ($in ne "") {
+    do {
 
-      if ($debug) {
-	print STDERR _str2hex($in), "\n";
-      }
+      # My GlobalMap 100 seems to return data in 8-byte blocks. So we
+      # have to input in drips and drabs.
 
-      if ($ack) {
-	$expected -= length($in);
-	$rcvd .= $in;
-      } else {
+      my $in = $port->input;
 
-	my $hdr = $LsiSentence->unformat( $in );
+      if ($in ne "") {
 
-	if ( ($hdr->{Header} == LSI_PREAMBLE) &&
-	     ($hdr->{Cmd} == ($cmd | 0x80)) ) {
+	if ($debug) {
+	  print STDERR "RCVD => ", _str2hex($in), "\n"; }
 
-	  if ($hdr->{Chksum} != lsi_checksum( substr($in, 0, -1) )) {
-	    warn "response header checksum mismatch"; }
-
-	  $expected = 1+$hdr->{Cnt}, if ($hdr->{Cnt});
-	  $ack      = 1;
-	  $rcvd    .= $in;
+	if ($ack) {
+	  $expected -= length($in);
+	  $rcvd .= $in;
 	} else {
-	  warn "ignoring unrecognized response";
+
+	  my $hdr = $LsiSentence->unformat( $in );
+
+	  if ( ($hdr->{Header} == LSI_PREAMBLE) &&
+	       ($hdr->{Cmd}    == ($cmd | 0x80)) ) {
+
+	    unless (verify_checksum( $in )) {
+	      warn "response header checksum mismatch";
+	      $bad_chksum = 1;
+	    }
+
+	    $expected = 1+$hdr->{Cnt}, if ($hdr->{Cnt});
+	    $ack      = 1;
+	    $rcvd    .= $in;
+	  } else {
+	    warn "ignoring unrecognized response";
+	  }
 	}
       }
+
+      assert( $expected >= 0 ), if DEBUG;
+
+      $no_timed_out = (time < $end_time);
+
+    } while ($expected && $no_timed_out);
+
+    if (length($rcvd) > 8) {
+      unless (verify_checksum( substr($rcvd, 8) )) {
+	warn "data checksum mismatch";	
+	$bad_chksum = 1;
+      }
     }
+    if ($retry<0) { $bad_chksum = 0; } # ignore bad checksum
+  } while ($retry-- && $bad_chksum);
 
-    assert( $expected >= 0 ), if DEBUG;
-
-  } while ($expected && (time < $end_time));
-
-  if (length($rcvd) > 8) {
-    my $chk_calc = lsi_checksum( substr($rcvd, 8, -1) );
-    my $chk_rcvd = unpack( "C", substr($rcvd, -1) );
-    if ($chk_calc != $chk_rcvd) {
-      warn "data checksum mismatch";
-    }
+  if ($bad_chksum) {
+    return;
   }
 
-  # if there is a time out, return undef; should we use a timeout flag
-  # instead?
-
-  if (time >= $end_time) {
+  unless ($no_timed_out) {
     warn "timed out";
     return;
   }
@@ -208,8 +227,8 @@ For Windows playforms, you may need to use C<nmake> instead.
 =head1 DESCRIPTION
 
 This module provides I<very> low-level support for the LSI (Lowrance
-Serial Interface) 100 protocol used to communicate with Lowrance GPS
-devices.
+Serial Interface) 100 protocol used to communicate with Lowrance and
+Eagle GPS devices.
 
 (Higher-level functions and wrappers for specific commands will be
 provided in other modules.  This module is intentionally kept simple.)
@@ -220,22 +239,48 @@ provided in other modules.  This module is intentionally kept simple.)
 
 =item lsi_query
 
-  $data_out = lsi_query( $port, $cmd, $data_in, $id, $debug, $timeout );
+  $data_out = lsi_query( $port, $cmd, $data_in, $id, $debug,
+			 $timeout, $retry );
 
 This method submits an LSI query sentence (with the command and input
 data) to a GPS connected to the device specified by serial port at
-C<$port>.  (See the LSI specification on the Lowrance web site for the
-specific command codes.)
+C<$port>.  (See the LSI specification on the Lowrance or Eagle web
+sites for the specific command codes.)
 
-It then waits C<$timeout> seconds (defaults to 30) for a response.  If
+It then waits C<$timeout> seconds (defaults to 5) for a response.  If
 there is no response, it returns C<undef>.
 
-Otherwise, it verifies that the response is well-formed and returns the data.
-(The first 8-bytes of the returned data is the response header.)
+Otherwise, it verifies that the response is well-formed and returns
+the data.  If C<$retry> is greater than zero, then it will retry the
+query C<$retry> times if there is a bad checksum or if there is a
+timeout.  (If the checksum keeps failing or responses time out, it
+will return C<undef>.)
+
+A value of C<-1> for C<$retry> causes bad checksums to be ignored.
+
+The C<$id> value is "reserved" and should be set to 0.
+
+The first 8-bytes of the returned data is the response header.
 
 The format of the rest of the data depends on the command.
 
 If C<$debug> is true, then debugging information is shown.
+
+=item verify_checksum
+
+  if (verify_checksum( $data )) { ... }
+
+Used to verify the checksum in the data.  The last byte of data
+returned is the checksum of the data.
+
+Note that L</lsi_query> returns the initial 8-byte acknowledgement
+header along with any data.  So to verify data returned by that
+function:
+
+  if (verify_checksum( substr( $data, 8 ) )) { ... }
+
+The query function already verifies data returned by the query. So
+there is usually no need to re-check the data.
 
 =item lsi_checksum
 
@@ -254,7 +299,7 @@ An example of using this module to query product information is below:
   use GPS::Lowrance::LSI;
   use Parse::Binary::FixedFormat;
 
-  my $inforec = new Parse::Binary::FixedFormat [
+  $InfoRec = new Parse::Binary::FixedFormat [
    qw( Reserved:C ProductID:v ProtocolVersion:v
        ScreenType:v ScreenWidth:v ScreenHeight:v
        NumOfWaypoints:v NumOfIcons:v NumOfRoutes:v
@@ -262,12 +307,15 @@ An example of using this module to query product information is below:
        NumOfPlotTrails:C NumOfIconSym:C ScreenRotateAngle:C
        RunTime:V Checksum:C )];
 
-  # We assume that $port is already initialized to a serial port using
+  # We assume that $Port is already initialized to a serial port using
   # Win32::SerialPort or Device::SerialPort
 
-  my $buff = lsi_query($port, 0x30e);
+  $Buff = lsi_query($Port, 0x30e);
 
-  my $info = $inforec->unformat( substr($buff, 8) );
+  $Info = $InfoRec->unformat( substr($Buff, 8) );
+
+A working implementation of this example can be found in the file
+C<eg/getinfo.pl> included with this distrubtion.
 
 =head1 TODO
 
@@ -283,7 +331,7 @@ This is an early release of the module, so likely there are bugs.
 This module has not (yet) been tested with Device::SerialPort.
 Feedback on this would be appreciated.
 
-Win32::SerialPort unfortunately has not been updated since 1999.
+C<Win32::SerialPort> unfortunately has not been updated since 1999.
 
 =head1 SEE ALSO
 
@@ -293,9 +341,24 @@ serial port connection objects for use with this module.
 C<Parse::Binary::FixedFormat> is useful for flexible parsing binary
 structures used by this protocol.
 
-The Lowrance Serial Interface (LSI) Protocol is described in a document
-available on the L<Lowrance|http://www.lowrance.com> web site at
-L<http://www.lowrance.com/Software/CyberCom_LSI100/cybercom_lsi100.asp>.
+The Lowrance Serial Interface (LSI) Protocol is described in a
+document available on the L<Lowrance|http://www.lowrance.com> or
+L<Eagle|http://www.eaglegps.com> web sites, such as at
+L<http://www.lowrance.com/Software/CyberCom_LSI100/cybercom_lsi100.asp>
+or L<http://www.eaglegps.com/Downloads/Software/CyberCom/default.htm>.
+(Note that the specific URLs are subject to change.)
+
+=head2 Other Implementations
+
+There is a Python module by Gene Cash for handling the LSI 100 protocol at
+L<http://home.cfl.rr.com/genecash/eagle.html>.
+
+=head2 Other GPS Vendors
+
+There are other Perl modules to communicate with different GPS brands:
+
+  GPS::Garmin
+  GPS::Magellen
 
 =head1 AUTHOR
 
