@@ -1,0 +1,6 @@
+Revision history for Perl extension GPS::Lowrance::LSI.
+
+0.01  29 Feb 2004
+	- original version; created by h2xs 1.23 with options
+		-n GPS::Lowrance::LSI -v 0.01 -X
+	- uploaded to CPAN

@@ -1,0 +1,43 @@
+NAME
+    GPS::Lowrance::LSI - Lowrance Serial Interface Protocol module in Perl
+
+REQUIREMENTS
+    The following modules are required to use this module:
+
+      Carp::Assert
+      Win32::SerialPort or Device::SerialPort
+
+    This module should work with Perl 5.6.x. It has been tested on Perl
+    5.8.2.
+
+SYNOPSIS
+      use Win32::SerialPort;                # or Device::SerialPort (?)
+      use GPS::Lowrance::LSI 'lsi_query';
+
+      my $port = new Win32::SerialPort( 'com1' );
+
+      my $data = lsi_query( $port, 0x30e, "", 0 );
+
+DESCRIPTION
+    This module provides *very* low-level support for the LSI 100 protocol
+    used to communicate with Lowrance GPS devices.
+
+    More information can be found in the POD.
+
+SEE ALSO
+    The Lowrance Serial Interface (LSI) Protocol is described in a document
+    available on the Lowrance web site at <http://www.lowrance.com>.
+
+AUTHOR
+    Robert Rothenberg <rrwo at cpan.org>
+
+    Please report any bugs using the CPAN Request Tracker at
+    <http://rt.cpan.org>.
+
+COPYRIGHT AND LICENSE
+    Copyright (C) 2004 by Robert Rothenberg <rrwo at cpan.org>.
+
+    This library is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself, either Perl version 5.8.2 or, at
+    your option, any later version of Perl 5 you may have available.
+

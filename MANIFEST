@@ -1,0 +1,7 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/GPS-Lowrance-LSI.t
+lib/GPS/Lowrance/LSI.pm
+META.yml                                 Module meta-data (added by MakeMaker)
