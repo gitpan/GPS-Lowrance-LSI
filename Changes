@@ -1,5 +1,12 @@
 Revision history for Perl extension GPS::Lowrance::LSI.
 
+0.21
+	- fixed bug with retries for bad checksums
+	- retries for timeouts did not work
+	- added checksum to submitted data
+	- eg/getinfo.pl, $PortObj close method was not called
+	- Makefile.PL still requires 5.00802; changed to 5.006
+
 0.20   1 Mar 2004
 	- example script added
 	- default timeout changed to 5

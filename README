@@ -40,17 +40,14 @@ DESCRIPTION
     More information is available in the module documentation.
 
 REVISION HISTORY
-    Changes since version 0.10:
+    Changes since version 0.21:
 
-    0.20   1 Mar 2004
-	- example script added
-	- default timeout changed to 5
-	- minor changes to test cases
-	- implemented retry functionality for bad checksums
-	- timeout covers transmit time as well
-	- debug output has "XMIT" and "RCVD" headers
-	- added verify_checksum function
-	- updates and additions to POD
+    0.21   2 Mar 2004
+	- fixed bug with retries for bad checksums
+	- retries for timeouts did not work
+	- added checksum to submitted data
+	- eg/getinfo.pl, $PortObj close method was not called
+	- Makefile.PL still requires 5.00802; changed to 5.006
 
 AUTHOR
     Robert Rothenberg <rrwo at cpan.org>

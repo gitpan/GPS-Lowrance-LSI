@@ -19,7 +19,7 @@ our @EXPORT = qw(
   lsi_query
 );
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 use Carp::Assert;
 use Parse::Binary::FixedFormat;
@@ -105,20 +105,27 @@ sub lsi_query {
   my $xmit = $LsiSentence->format( $hdr );   # build structure w/out checksum
   $hdr->{Chksum} = lsi_checksum( $xmit );    # update checksum and rebuild
 
-  $xmit = $LsiSentence->format( $hdr ) . $send_data;
+  if ($size) {
+    $send_data   .= pack("C", lsi_checksum( $send_data ));
+  }
+  $xmit           = $LsiSentence->format( $hdr ) . $send_data;
+
+
+  my $bad_chksum   = 0;                      # was checksum bad?
+  my $rcvd         = "";	             # receive buffer
 
   my $end_time     = $timeout + time;        # when to timeout
   my $no_timed_out = 1;                      # not timed out?
 
-  my $bad_chksum   = 0;                      # was checksum bad?
-
-  my $rcvd         = "";	             # receive buffer
-
   do {
     if ($debug) {
-      print STDERR "XMIT => ", _str2hex($xmit), "\n"; }
+      print STDERR "XMIT => ", _str2hex($xmit), "\n";
+    }
 
     $port->write( $xmit );
+
+    $end_time     = $timeout + time;         # reset timeouts
+    $no_timed_out = 1;                       # 
 
     my $expected     = 8;	             # bytes expected (header size)
     my $ack          = 0;	             # was an ack received?
@@ -171,8 +178,12 @@ sub lsi_query {
 	$bad_chksum = 1;
       }
     }
-    if ($retry<0) { $bad_chksum = 0; } # ignore bad checksum
-  } while ($retry-- && $bad_chksum);
+
+    if ($retry<0) {                     # ignore bad checksum and timeouts
+      $bad_chksum = 0;
+      $no_timed_out = 1;
+    } 
+  } while ( $retry-- && ($bad_chksum || (!$no_timed_out)) );
 
   if ($bad_chksum) {
     return;

@@ -57,6 +57,8 @@ my $Info = $InfoRec->unformat( substr($Buff, 8) );
 
 print Data::Dumper->Dump([$Info],['Info']);
 
+$PortObj->close;
+
 exit 0;
 
 __END__
